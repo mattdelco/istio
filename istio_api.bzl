@@ -21,7 +21,7 @@ def go_istio_api_repositories(use_local=False):
     if use_local:
         native.local_repository(
             name = "io_istio_api",
-            path = "../api",
+            path = "../../../../api",
         )
     else:
       native.git_repository(

@@ -746,6 +746,12 @@ go_repository(
 # )
 
 go_repository(
+    name = "io_istio_istio_gogo_genproto",
+    commit = "09740ece0bc45a1cd0971a8b1f57c44b13ccd8dd",  # Dec 14, 2017 (initial generation of status protos)
+    importpath = "istio.io/gogo-genproto",
+)
+
+go_repository(
     name = "com_github_golang_glog",
     commit = "44145f04b68cf362d9c4df2182967c2275eaefed",
     importpath = "github.com/golang/glog",

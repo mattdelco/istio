@@ -42,6 +42,18 @@ if [ ${ROOT} != "${GO_TOP:-$HOME/go}/src/istio.io/istio" ]; then
        exit 1
 fi
 
+if [[ ${LOCAL_PROXY_PATH:-} != "" ]]; then
+  echo "using local proxy repo at ${LOCAL_PROXY_PATH}"
+  cp ${LOCAL_PROXY_PATH}/bazel-bin/src/envoy/envoy $ISTIO_GO/vendor/envoy
+  mkdir -p ${ISTIO_OUT}
+  cp $ISTIO_GO/vendor/envoy ${ISTIO_OUT}/envoy
+  mkdir -p ${ISTIO_BIN}
+  cp $ISTIO_GO/vendor/envoy ${ISTIO_BIN}/envoy
+  # Mimicing how the orther deletes this for TBD reasons
+  rm -f ${ROOT}/pilot/pkg/proxy/envoy/envoy
+  exit 0
+fi
+
 PROXYVERSION=$(grep envoy-debug pilot/docker/Dockerfile.proxy_debug  |cut -d: -f2)
 PROXY=debug-$PROXYVERSION
 
@@ -83,6 +95,7 @@ if [ ! -f $OUT/envoy-$PROXYVERSION ] ; then
     popd
 fi
 
+# XXX Why isn't this updating/overwriting an existing file?
 if [ ! -f ${ISTIO_OUT}/envoy ] ; then
     mkdir -p ${ISTIO_OUT}
     # Make sure the envoy binary exists.
@@ -90,6 +103,7 @@ if [ ! -f ${ISTIO_OUT}/envoy ] ; then
 fi
 
 # circleCI expects this in the bin directory
+# XXX Why isn't this updating/overwriting an existing file?
 if [ ! -f ${ISTIO_BIN}/envoy ] ; then
     mkdir -p ${ISTIO_BIN}
     cp $OUT/envoy-$PROXYVERSION ${ISTIO_BIN}/envoy

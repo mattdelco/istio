@@ -127,8 +127,11 @@ docker.grafana: addons/grafana/Dockerfile$$(suffix $$@) $(GRAFANA_FILES) $(ISTIO
 
 DOCKER_TARGETS:=$(PILOT_DOCKER) $(SERVICEGRAPH_DOCKER) $(MIXER_DOCKER) $(SECURITY_DOCKER) docker.grafana
 
+$(if $(LOCAL_PROXY_PATH), \
+     $(eval DOCKER_OPT:=--build-arg ENVOY_IMAGE=envoy:latest --build-arg ENVOY_DEBUG_IMAGE=envoy-debug:latest ))
+
 DOCKER_RULE=time (cp $< $(ISTIO_DOCKER)/ && cd $(ISTIO_DOCKER) && \
-            docker build -t $(HUB)/$(subst docker.,,$@):$(TAG) -f Dockerfile$(suffix $@) .)
+            docker build $(DOCKER_OPT) -t $(HUB)/$(subst docker.,,$@):$(TAG) -f Dockerfile$(suffix $@) .)
 
 docker.all: $(DOCKER_TARGETS)
 

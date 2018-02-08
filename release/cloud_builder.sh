@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copyright 2017 Istio Authors. All Rights Reserved.
+1;95;0c# Copyright 2017 Istio Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -78,6 +78,11 @@ echo gopath is $GOPATH
 ISTIO_OUT=$(make DEBUG=0 where-is-out)
 
 export ISTIO_VERSION="${TAG_NAME}"
+
+pushd ../../../../src/proxy
+export LOCAL_PROXY_PATH="$(pwd)"
+USE_LOCAL_HUB=true script/release-docker
+popd
 
 MAKE_TARGETS=istio-archive
 if [ "${BUILD_DEBIAN}" == "true" ]; then

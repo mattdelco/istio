@@ -257,39 +257,39 @@ PILOT_GO_BINS:=${ISTIO_OUT}/pilot-discovery ${ISTIO_OUT}/pilot-agent \
                ${ISTIO_OUT}/istioctl ${ISTIO_OUT}/sidecar-injector
 PILOT_GO_BINS_SHORT:=pilot-discovery pilot-agent istioctl sidecar-injector
 define pilotbuild
-$(1): depend
+$(1): vendor/Gopkg.lock | depend
 	bin/gobuild.sh ${ISTIO_OUT}/$(1) istio.io/istio/pkg/version ./pilot/cmd/$(1)
 
-${ISTIO_OUT}/$(1): depend
+${ISTIO_OUT}/$(1): vendor/Gopkg.lock | depend
 	bin/gobuild.sh ${ISTIO_OUT}/$(1) istio.io/istio/pkg/version ./pilot/cmd/$(1)
 endef
 $(foreach ITEM,$(PILOT_GO_BINS_SHORT),$(eval $(call pilotbuild,$(ITEM))))
 
 # Non-static istioctls. These are typically a build artifact.
-${ISTIO_OUT}/istioctl-linux: depend
+${ISTIO_OUT}/istioctl-linux: vendor/Gopkg.lock | depend
 	STATIC=0 GOOS=linux   bin/gobuild.sh $@ istio.io/istio/pkg/version ./pilot/cmd/istioctl
-${ISTIO_OUT}/istioctl-osx: depend
+${ISTIO_OUT}/istioctl-osx: vendor/Gopkg.lock | depend
 	STATIC=0 GOOS=darwin  bin/gobuild.sh $@ istio.io/istio/pkg/version ./pilot/cmd/istioctl
-${ISTIO_OUT}/istioctl-win.exe: depend
+${ISTIO_OUT}/istioctl-win.exe: vendor/Gopkg.lock | depend
 	STATIC=0 GOOS=windows bin/gobuild.sh $@ istio.io/istio/pkg/version ./pilot/cmd/istioctl
 
 MIXER_GO_BINS:=${ISTIO_OUT}/mixs ${ISTIO_OUT}/mixc
-mixc: depend
+mixc: vendor/Gopkg.lock | depend
 	bin/gobuild.sh ${ISTIO_OUT}/mixc istio.io/istio/pkg/version ./mixer/cmd/mixc
-mixs: depend
+mixs: vendor/Gopkg.lock | depend
 	bin/gobuild.sh ${ISTIO_OUT}/mixs istio.io/istio/pkg/version ./mixer/cmd/mixs
 
-$(MIXER_GO_BINS): depend
+$(MIXER_GO_BINS): vendor/Gopkg.lock | depend
 	bin/gobuild.sh $@ istio.io/istio/pkg/version ./mixer/cmd/$(@F)
 
-servicegraph: depend
+servicegraph: vendor/Gopkg.lock | depend
 	bin/gobuild.sh $@ istio.io/istio/pkg/version ./mixer/example/servicegraph/cmd/server
 
-${ISTIO_OUT}/servicegraph: depend
+${ISTIO_OUT}/servicegraph: vendor/Gopkg.lock | depend
 	bin/gobuild.sh $@ istio.io/istio/pkg/version ./addons/$(@F)/cmd/server
 
 SECURITY_GO_BINS:=${ISTIO_OUT}/node_agent ${ISTIO_OUT}/istio_ca ${ISTIO_OUT}/multicluster_ca
-$(SECURITY_GO_BINS): depend
+$(SECURITY_GO_BINS): vendor/Gopkg.lock | depend
 	bin/gobuild.sh $@ istio.io/istio/pkg/version ./security/cmd/$(@F)
 
 .PHONY: build
@@ -302,18 +302,18 @@ build: $(PILOT_GO_BINS) $(MIXER_GO_BINS) $(SECURITY_GO_BINS)
 # This is intended for developer use - will rebuild the package.
 
 .PHONY: istio-ca
-istio-ca: depend
+istio-ca: vendor/Gopkg.lock | depend
 	bin/gobuild.sh ${ISTIO_OUT}/istio_ca istio.io/istio/pkg/version ./security/cmd/istio_ca
 
 .PHONY: node-agent
-node-agent: depend
+node-agent: vendor/Gopkg.lock | depend
 	bin/gobuild.sh ${ISTIO_OUT}/node-agent istio.io/istio/pkg/version ./security/cmd/node-agent
 
 .PHONY: pilot
 pilot: pilot-discovery
 
 .PHONY: multicluster_ca
-multicluster_ca: depend
+multicluster_ca: vendor/Gopkg.lock | depend
 	bin/gobuild.sh $@ istio.io/istio/pkg/version ./security/cmd/$(@F)
 
 # istioctl-all makes all of the non-static istioctl executables for each supported OS
@@ -326,7 +326,8 @@ istio-archive: ${ISTIO_OUT}/archive
 
 # TBD: how to capture VERSION, ISTIO_DOCKER_HUB, ISTIO_URL, ISTIO_URL_ISTIOCTL as dependencies
 # consider using -a with updateVersion.sh to simplify the input parameters
-${ISTIO_OUT}/archive: istioctl-all LICENSE README.md istio.VERSION install/updateVersion.sh release/create_release_archives.sh
+${ISTIO_OUT}/archive: ${ISTIO_OUT}/istioctl-linux ${ISTIO_OUT}/istioctl-osx ${ISTIO_OUT}/istioctl-win.exe \
+                      LICENSE README.md istio.VERSION install/updateVersion.sh release/create_release_archives.sh
 	rm -rf ${ISTIO_OUT}/archive
 	mkdir -p ${ISTIO_OUT}/archive/istioctl
 	cp ${ISTIO_OUT}/istioctl-* ${ISTIO_OUT}/archive/istioctl/

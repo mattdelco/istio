@@ -65,7 +65,7 @@ fi
 #              cp Gopkg.lock vendor/Gopkg.lock)
 #fi
 
-git submodule update --init --recursive
+git submodule update vendor
 
 PROXYVERSION=$(grep envoy-debug pilot/docker/Dockerfile.proxy_debug  |cut -d: -f2)
 PROXY=debug-$PROXYVERSION

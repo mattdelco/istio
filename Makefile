@@ -165,8 +165,11 @@ ${ISTIO_BIN}/have_go_$(GO_VERSION_REQUIRED): | $(ISTIO_BIN)
 
 # Downloads envoy, based on the SHA defined in the base pilot Dockerfile
 # Will also check vendor, based on Gopkg.lock
-init: bin/init.sh pilot/docker/Dockerfile.proxy_debug | ${ISTIO_BIN}/have_go_$(GO_VERSION_REQUIRED) ${ISTIO_OUT}
+init: bin/init.sh pilot/docker/Dockerfile.proxy_debug | ${ISTIO_BIN}/have_go_$(GO_VERSION_REQUIRED) ${ISTIO_OUT} vendor/Gopkg.lock
 	@(ISTIO_OUT=${ISTIO_OUT} bin/init.sh)
+
+vendor/Gopkg.lock:
+	git submodule update --init vendor
 
 # I tried to make this dependent on what I thought was the appropriate
 # lock file, but it caused the rule for that file to get run (which

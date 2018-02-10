@@ -156,8 +156,8 @@ VER_TO_INT:=awk '{split(substr($$0, match ($$0, /[0-9\.]+/)), a, "."); print a[1
 
 # using a sentinel file so this check is only performed once per version.  Performance is
 # being favored over the unlikely situation that go gets downgraded to an older version
-check-go-version: | $(ISTIO_BIN) ${ISTIO_BIN}/have_go_$(GO_VERSION_REQUIRED)
-${ISTIO_BIN}/have_go_$(GO_VERSION_REQUIRED):
+check-go-version: | ${ISTIO_BIN}/have_go_$(GO_VERSION_REQUIRED)
+${ISTIO_BIN}/have_go_$(GO_VERSION_REQUIRED): | $(ISTIO_BIN)
 	@if test $(shell $(GO) version | $(VER_TO_INT) ) -lt \
                  $(shell echo "$(GO_VERSION_REQUIRED)" | $(VER_TO_INT) ); \
                  then printf "go version $(GO_VERSION_REQUIRED)+ required, found: "; $(GO) version; exit 1; fi
@@ -165,14 +165,15 @@ ${ISTIO_BIN}/have_go_$(GO_VERSION_REQUIRED):
 
 # Downloads envoy, based on the SHA defined in the base pilot Dockerfile
 # Will also check vendor, based on Gopkg.lock
-init: check-go-version $(ISTIO_OUT)/istio_is_init
+init: bin/init.sh pilot/docker/Dockerfile.proxy_debug | ${ISTIO_BIN}/have_go_$(GO_VERSION_REQUIRED) ${ISTIO_OUT}
+	@(ISTIO_OUT=${ISTIO_OUT} bin/init.sh)
 
 # I tried to make this dependent on what I thought was the appropriate
 # lock file, but it caused the rule for that file to get run (which
 # seems to be about obtaining a new version of the 3rd party libraries).
-$(ISTIO_OUT)/istio_is_init: bin/init.sh pilot/docker/Dockerfile.proxy_debug | ${ISTIO_OUT} ${DEP}
-	@(DEP=${DEP} ISTIO_OUT=${ISTIO_OUT} bin/init.sh)
-	@touch $(ISTIO_OUT)/istio_is_init
+#$(ISTIO_OUT)/istio_is_init: bin/init.sh pilot/docker/Dockerfile.proxy_debug | ${ISTIO_OUT}
+#	@(ISTIO_OUT=${ISTIO_OUT} bin/init.sh)
+#	@touch $(ISTIO_OUT)/istio_is_init
 
 # init.sh downloads envoy
 ${ISTIO_OUT}/envoy: init
@@ -180,7 +181,7 @@ ${ISTIO_OUT}/envoy: init
 # Pull depdendencies, based on the checked in Gopkg.lock file.
 # Developers must manually call dep.update if adding new deps or to pull recent
 # changes.
-depend: init | $(ISTIO_OUT)
+depend: init
 
 $(ISTIO_OUT) $(ISTIO_BIN):
 	@mkdir -p $@
@@ -253,10 +254,10 @@ PILOT_GO_BINS:=${ISTIO_OUT}/pilot-discovery ${ISTIO_OUT}/pilot-agent \
                ${ISTIO_OUT}/istioctl ${ISTIO_OUT}/sidecar-injector
 PILOT_GO_BINS_SHORT:=pilot-discovery pilot-agent istioctl sidecar-injector
 define pilotbuild
-$(1):
+$(1): depend
 	bin/gobuild.sh ${ISTIO_OUT}/$(1) istio.io/istio/pkg/version ./pilot/cmd/$(1)
 
-${ISTIO_OUT}/$(1):
+${ISTIO_OUT}/$(1): depend
 	bin/gobuild.sh ${ISTIO_OUT}/$(1) istio.io/istio/pkg/version ./pilot/cmd/$(1)
 endef
 $(foreach ITEM,$(PILOT_GO_BINS_SHORT),$(eval $(call pilotbuild,$(ITEM))))
@@ -270,26 +271,26 @@ ${ISTIO_OUT}/istioctl-win.exe: depend
 	STATIC=0 GOOS=windows bin/gobuild.sh $@ istio.io/istio/pkg/version ./pilot/cmd/istioctl
 
 MIXER_GO_BINS:=${ISTIO_OUT}/mixs ${ISTIO_OUT}/mixc
-mixc:
+mixc: depend
 	bin/gobuild.sh ${ISTIO_OUT}/mixc istio.io/istio/pkg/version ./mixer/cmd/mixc
-mixs:
+mixs: depend
 	bin/gobuild.sh ${ISTIO_OUT}/mixs istio.io/istio/pkg/version ./mixer/cmd/mixs
 
-$(MIXER_GO_BINS):
+$(MIXER_GO_BINS): depend
 	bin/gobuild.sh $@ istio.io/istio/pkg/version ./mixer/cmd/$(@F)
 
-servicegraph:
+servicegraph: depend
 	bin/gobuild.sh $@ istio.io/istio/pkg/version ./mixer/example/servicegraph/cmd/server
 
-${ISTIO_OUT}/servicegraph:
+${ISTIO_OUT}/servicegraph: depend
 	bin/gobuild.sh $@ istio.io/istio/pkg/version ./addons/$(@F)/cmd/server
 
 SECURITY_GO_BINS:=${ISTIO_OUT}/node_agent ${ISTIO_OUT}/istio_ca ${ISTIO_OUT}/multicluster_ca
-$(SECURITY_GO_BINS):
+$(SECURITY_GO_BINS): depend
 	bin/gobuild.sh $@ istio.io/istio/pkg/version ./security/cmd/$(@F)
 
 .PHONY: build
-build: depend $(PILOT_GO_BINS) $(MIXER_GO_BINS) $(SECURITY_GO_BINS)
+build: $(PILOT_GO_BINS) $(MIXER_GO_BINS) $(SECURITY_GO_BINS)
 
 # The following are convenience aliases for most of the go targets
 # The first block is for aliases that are the same as the actual binary,
@@ -298,18 +299,18 @@ build: depend $(PILOT_GO_BINS) $(MIXER_GO_BINS) $(SECURITY_GO_BINS)
 # This is intended for developer use - will rebuild the package.
 
 .PHONY: istio-ca
-istio-ca:
+istio-ca: depend
 	bin/gobuild.sh ${ISTIO_OUT}/istio_ca istio.io/istio/pkg/version ./security/cmd/istio_ca
 
 .PHONY: node-agent
-node-agent:
+node-agent: depend
 	bin/gobuild.sh ${ISTIO_OUT}/node-agent istio.io/istio/pkg/version ./security/cmd/node-agent
 
 .PHONY: pilot
 pilot: pilot-discovery
 
 .PHONY: multicluster_ca
-multicluster_ca:
+multicluster_ca: depend
 	bin/gobuild.sh $@ istio.io/istio/pkg/version ./security/cmd/$(@F)
 
 # istioctl-all makes all of the non-static istioctl executables for each supported OS

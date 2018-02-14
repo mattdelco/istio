@@ -79,10 +79,11 @@ ISTIO_OUT=$(make DEBUG=0 where-is-out)
 
 export ISTIO_VERSION="${TAG_NAME}"
 
-pushd ../../../../src/proxy
-export LOCAL_PROXY_PATH="$(pwd)"
-USE_LOCAL_HUB=true script/release-docker
-popd
+# uncomment this block to have istio use a locally-compiled proxy
+# pushd ../../../../src/proxy
+# export LOCAL_PROXY_PATH="$(pwd)"
+# USE_LOCAL_HUB=true script/release-docker
+# popd
 
 MAKE_TARGETS=istio-archive
 if [ "${BUILD_DEBIAN}" == "true" ]; then

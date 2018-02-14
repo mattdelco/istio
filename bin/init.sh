@@ -49,7 +49,7 @@ if [[ ${LOCAL_PROXY_PATH:-} != "" ]]; then
   cp $ISTIO_GO/vendor/envoy ${ISTIO_OUT}/envoy
   mkdir -p ${ISTIO_BIN}
   cp $ISTIO_GO/vendor/envoy ${ISTIO_BIN}/envoy
-  # Mimicing how the orther deletes this for TBD reasons
+  # Mimicing how the non-local-proxy path deletes this file for TBD reasons
   rm -f ${ROOT}/pilot/pkg/proxy/envoy/envoy
   exit 0
 fi
@@ -95,7 +95,6 @@ if [ ! -f $OUT/envoy-$PROXYVERSION ] ; then
     popd
 fi
 
-# XXX Why isn't this updating/overwriting an existing file?
 if [ ! -f ${ISTIO_OUT}/envoy ] ; then
     mkdir -p ${ISTIO_OUT}
     # Make sure the envoy binary exists.
@@ -103,7 +102,6 @@ if [ ! -f ${ISTIO_OUT}/envoy ] ; then
 fi
 
 # circleCI expects this in the bin directory
-# XXX Why isn't this updating/overwriting an existing file?
 if [ ! -f ${ISTIO_BIN}/envoy ] ; then
     mkdir -p ${ISTIO_BIN}
     cp $OUT/envoy-$PROXYVERSION ${ISTIO_BIN}/envoy

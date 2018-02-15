@@ -28,34 +28,45 @@ set -x
 # uses store_artifacts.sh to store the build on GCR/GCS.
 
 OUTPUT_PATH=""
+# The default for PROXY_PATH (which indicates where the proxy path is located
+# relative to the istio repo) is based on repo manifest that places istio at:
+# go/src/istio.io/istio
+# and proxy at:
+# src/proxy
+PROXY_PATH="../../../../src/proxy"
 TAG_NAME="0.0.0"
 BUILD_DEBIAN="true"
 BUILD_DOCKER="true"
 REL_DOCKER_HUB=docker.io/istio
 TEST_DOCKER_HUB=""
 TEST_GCS_PATH=""
+BUILD_LOCAL="false"
 
 function usage() {
   echo "$0
     -b        opts out of building debian artifacts
     -c        opts out of building docker artifacts
     -h        docker hub to use for testing (optional)
+    -l        build all of istio locally
     -o        path to store build artifacts
     -p        GCS bucket & prefix path where build will be stored for testing (optional)
     -q        path on gcr hub to use for testing (optional, alt to -h)
-    -t <tag>  tag to use (optional, defaults to ${TAG_NAME} )"
+    -t <tag>  tag to use (optional, defaults to ${TAG_NAME} )
+    -y        path to proxy repo (relative to istio repo, defaults to ${PROXY_PATH} )"
   exit 1
 }
 
-while getopts bch:o:p:q:t: arg ; do
+while getopts bch:lo:p:q:t:y: arg ; do
   case "${arg}" in
     b) BUILD_DEBIAN="false";;
     c) BUILD_DOCKER="false";;
     h) TEST_DOCKER_HUB="${OPTARG}";;
+    l) BUILD_LOCAL="true";;
     p) TEST_GCS_PATH="${OPTARG}";;
     q) TEST_DOCKER_HUB="gcr.io/${OPTARG}";;
     o) OUTPUT_PATH="${OPTARG}";;
     t) TAG_NAME="${OPTARG}";;
+    y) PROXY_PATH="${PROXY_PATH}";;
     *) usage;;
   esac
 done
@@ -79,11 +90,18 @@ ISTIO_OUT=$(make DEBUG=0 where-is-out)
 
 export ISTIO_VERSION="${TAG_NAME}"
 
-# uncomment this block to have istio use a locally-compiled proxy
-# pushd ../../../../src/proxy
-# export LOCAL_PROXY_PATH="$(pwd)"
-# USE_LOCAL_HUB=true script/release-docker
-# popd
+if [ "${BUILD_LOCAL}" == "true" ]; then
+  pushd "${PROXY_PATH}"
+  export LOCAL_PROXY_PATH="$(pwd)"
+  # Use this file for Cloud Builder specific settings.
+  # This file sets RAM sizes and also specifies batch
+  # mode that should shutdown bazel after each call.
+  # NOTE: this file's config requires several GB of RAM
+  echo 'Setting bazel.rc'
+  cp tools/bazel.rc.cloudbuilder "${HOME}/.bazelrc"
+  USE_LOCAL_HUB=true script/release-docker
+  popd
+fi
 
 MAKE_TARGETS=istio-archive
 if [ "${BUILD_DEBIAN}" == "true" ]; then

@@ -83,11 +83,15 @@ docker.pilot:        $(ISTIO_DOCKER)/pilot-discovery
 docker.proxy docker.proxy_debug: $(ISTIO_DOCKER)/pilot-agent
 $(foreach FILE,$(PROXY_JSON_FILES),$(eval docker.proxy docker.proxy_debug: $(ISTIO_DOCKER)/$(notdir $(FILE))))
 docker.proxy docker.proxy_debug: $(ISTIO_DOCKER)/envoy_bootstrap_tmpl.json
+# a local proxy implies build everything from local source
+$(if $(LOCAL_PROXY_PATH), $(eval docker.proxy_init: docker.iptables ) )
 docker.proxy_init: $(ISTIO_DOCKER)/prepare_proxy.sh
 docker.sidecar_injector: $(ISTIO_DOCKER)/sidecar-injector
 
 PILOT_DOCKER:=docker.app docker.eurekamirror docker.pilot docker.proxy \
               docker.proxy_debug docker.proxy_init docker.sidecar_injector
+# a local proxy implies build everything from local source
+$(if $(LOCAL_PROXY_PATH), $(eval PILOT_DOCKER+=docker.iptables) )
 $(PILOT_DOCKER): pilot/docker/Dockerfile$$(suffix $$@) | $(ISTIO_DOCKER)
 	$(DOCKER_RULE)
 
@@ -130,7 +134,7 @@ DOCKER_TARGETS:=$(PILOT_DOCKER) $(SERVICEGRAPH_DOCKER) $(MIXER_DOCKER) $(SECURIT
 $(if $(LOCAL_PROXY_PATH), \
      $(eval DOCKER_OPT:=--build-arg ENVOY_IMAGE=envoy:latest \
                         --build-arg ENVOY_DEBUG_IMAGE=envoy-debug:latest \
-                        --build-arg IPTABLES_IMAGE=iptables:latest ))
+                        --build-arg IPTABLES_IMAGE=$(HUB)/iptables:$(TAG) ))
 
 DOCKER_RULE=time (cp $< $(ISTIO_DOCKER)/ && cd $(ISTIO_DOCKER) && \
             docker build $(DOCKER_OPT) -t $(HUB)/$(subst docker.,,$@):$(TAG) -f Dockerfile$(suffix $@) .)
